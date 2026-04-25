@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "functions": {
+    "api/transcribe.js": {
+      "maxDuration": 30
+    },
+    "api/generate-clips.js": {
+      "maxDuration": 60
+    }
+  }
+}
