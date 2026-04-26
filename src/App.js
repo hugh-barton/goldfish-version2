@@ -5,7 +5,6 @@ import './App.css';
 function App() {
   const [audioFile, setAudioFile] = useState(null);
   const [customTrigger, setCustomTrigger] = useState('');
-  const [transcripts, setTranscripts] = useState([]);
   const [clips, setClips] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -26,7 +25,6 @@ function App() {
     if (file && file.type.startsWith('audio/')) {
       setAudioFile(file);
       setClips([]);
-      setTranscripts([]);
     } else {
       alert('Please upload an audio file');
     }
@@ -74,7 +72,6 @@ function App() {
       
       setProgress(100);
       setClips(clipResponse.data.clips);
-      setTranscripts([transcription]);
       
     } catch (error) {
       console.error('Error processing audio:', error);
@@ -98,7 +95,6 @@ function App() {
     segments.forEach(segment => {
       const text = segment.text.toLowerCase();
       const start = segment.start;
-      const end = segment.end;
 
       allTriggers.forEach(trigger => {
         if (text.includes(trigger.toLowerCase())) {
