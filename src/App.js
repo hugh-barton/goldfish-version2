@@ -6,6 +6,7 @@ function App() {
   const [audioFile, setAudioFile] = useState(null);
   const [customTrigger, setCustomTrigger] = useState('');
   const [clips, setClips] = useState([]);
+  const [transcript, setTranscript] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef(null);
@@ -45,10 +46,12 @@ function App() {
 
     setIsProcessing(true);
     setProgress(0);
+    setClips([]);
+    setTranscript(null);
 
     try {
       // Step 1: Upload and transcribe audio using Whisper
-      setProgress(20);
+      setProgress(50);
       const formData = new FormData();
       formData.append('file', audioFile);
       
@@ -60,28 +63,8 @@ function App() {
       
       const transcription = response.data;
       
-      setProgress(50);
-      
-      // Step 2: Detect triggers
-      const detectedTriggers = detectTriggers(transcription);
-      
-      if (detectedTriggers.length === 0) {
-        setProgress(100);
-        alert('No triggers detected in the audio. Try using different trigger words or speak more clearly.');
-        return;
-      }
-      
-      setProgress(70);
-      
-      // Step 3: Generate clips
-      const clipResponse = await axios.post('/api/generate-clips', {
-        filePath: audioFile.name,
-        triggers: detectedTriggers,
-        originalFileName: audioFile.name
-      });
-      
       setProgress(100);
-      setClips(clipResponse.data.clips);
+      setTranscript(transcription);
       
     } catch (error) {
       console.error('Error processing audio:', error);
@@ -131,7 +114,7 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>🐠 Goldfish</h1>
-        <p>Find the golden moments in your audio recordings</p>
+        <p>Transcribe your audio recordings</p>
       </header>
 
       <main className="App-main">
@@ -156,6 +139,7 @@ function App() {
             </div>
           </div>
 
+          {/* Commenting out custom trigger input for now
           <div className="trigger-input">
             <label htmlFor="custom-trigger">Custom trigger word:</label>
             <input
@@ -166,13 +150,14 @@ function App() {
               placeholder="e.g., 'Banger', 'Keep', 'Star'"
             />
           </div>
+          */}
 
           <button 
             className="process-button"
             onClick={processAudio}
             disabled={!audioFile || isProcessing}
           >
-            {isProcessing ? 'Processing...' : 'Find Golden Moments'}
+            {isProcessing ? 'Transcribing...' : 'Transcribe Audio'}
           </button>
 
           {isProcessing && (
@@ -188,6 +173,7 @@ function App() {
           )}
         </div>
 
+        {/* Commenting out triggers info for now - will be restored when golden moments feature is enabled
         <div className="triggers-info">
           <h3>Detected Triggers</h3>
           <div className="trigger-lists">
@@ -201,50 +187,26 @@ function App() {
             </div>
           </div>
         </div>
+        */}
 
-        {clips.length > 0 && (
-          <div className="clips-section">
-            <h2>Found {clips.length} Golden Moments</h2>
-            <div className="clips-list">
-              {clips.map((clip, index) => (
-                <div key={index} className="clip-item">
-                  <div className="clip-info">
-                    <span className="clip-time">{formatTime(clip.timestamp)}</span>
-                    <span className={`clip-trigger ${clip.isExcitement ? 'excitement' : ''}`}>
-                      {clip.trigger}
-                    </span>
+        {transcript && (
+          <div className="transcript-section">
+            <h2>Audio Transcript</h2>
+            <div className="transcript-info">
+              <p><strong>Duration:</strong> {formatTime(transcript.duration || 0)}</p>
+              <p><strong>Language:</strong> {transcript.language || 'Detected automatically'}</p>
+            </div>
+            <div className="transcript-text">
+              {transcript.segments && transcript.segments.length > 0 ? (
+                transcript.segments.map((segment, index) => (
+                  <div key={index} className="segment">
+                    <span className="segment-time">[{formatTime(segment.start)}]</span>
+                    <span className="segment-text">{segment.text}</span>
                   </div>
-                  <div className="clip-preview">
-                    <audio controls src={clip.url}>
-                      Your browser does not support the audio element.
-                    </audio>
-                  </div>
-                  <div className="clip-actions">
-                    <button 
-                      className="download-btn"
-                      onClick={() => {
-                        // Create blob from base64 data
-                        const binaryString = window.atob(clip.url.split(',')[1]);
-                        const bytes = new Uint8Array(binaryString.length);
-                        for (let i = 0; i < binaryString.length; i++) {
-                          bytes[i] = binaryString.charCodeAt(i);
-                        }
-                        const blob = new Blob([bytes], { type: 'audio/mp3' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = clip.filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                      }}
-                    >
-                      Download
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p>{transcript.text || 'No transcript available'}</p>
+              )}
             </div>
           </div>
         )}
