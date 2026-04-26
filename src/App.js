@@ -23,8 +23,18 @@ function App() {
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file && file.type.startsWith('audio/')) {
-      setAudioFile(file);
-      setClips([]);
+      // Check for common audio formats including m4a
+      const validTypes = [
+        'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 
+        'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/aac'
+      ];
+      
+      if (validTypes.includes(file.type) || file.name.toLowerCase().endsWith('.m4a') || file.name.toLowerCase().endsWith('.mp3') || file.name.toLowerCase().endsWith('.wav')) {
+        setAudioFile(file);
+        setClips([]);
+      } else {
+        alert('Please upload a supported audio file (MP3, WAV, M4A, or AAC)');
+      }
     } else {
       alert('Please upload an audio file');
     }
@@ -133,7 +143,7 @@ function App() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="audio/*"
+              accept="audio/mp3,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/m4a,audio/x-m4a,audio/aac"
               onChange={handleFileUpload}
               style={{ display: 'none' }}
             />
@@ -142,7 +152,7 @@ function App() {
                 <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
               </svg>
               <p>{audioFile ? audioFile.name : 'Click to upload audio file'}</p>
-              <p className="upload-hint">Supports MP3, WAV, M4A and other audio formats</p>
+              <p className="upload-hint">Supports MP3, WAV, M4A (including iOS Voice Memos) and other audio formats</p>
             </div>
           </div>
 

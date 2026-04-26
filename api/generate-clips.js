@@ -7,14 +7,26 @@ const { promisify } = require('util');
 const execAsync = promisify(exec);
 
 // Helper to generate audio clips using ffmpeg
-async function generateAudioClip(inputPath, timestamp) {
+async function generateAudioClip(inputPath, timestamp, fileExtension) {
   // Generate 30 seconds before and after the timestamp
   const startTime = Math.max(0, timestamp - 30);
   const duration = 60; // 30 seconds before + 30 seconds after
   
   const outputPath = path.join('/tmp', `clip_${Date.now()}_${timestamp}.mp3`);
   
-  await execAsync(`"${ffmpeg}" -i "${inputPath}" -ss ${startTime} -t ${duration} -acodec copy "${outputPath}"`);
+  // Handle different audio formats - always convert to MP3 for consistency
+  if (fileExtension.toLowerCase() === '.m4a' || fileExtension.toLowerCase() === '.mp4') {
+    // For m4a files, convert to mp3 properly
+    await execAsync(`\"${ffmpeg}\" -i \"${inputPath}\" -ss ${startTime} -t ${duration} -acodec libmp3lame -ab 192k \"${outputPath}\"`);
+  } else {
+    // For other formats, try to copy the codec first, fall back to conversion if that fails
+    try {
+      await execAsync(`\"${ffmpeg}\" -i \"${inputPath}\" -ss ${startTime} -t ${duration} -acodec copy \"${outputPath}\"`);
+    } catch (copyError) {
+      console.log('Codec copy failed, converting to MP3:', copyError.message);
+      await execAsync(`\"${ffmpeg}\" -i \"${inputPath}\" -ss ${startTime} -t ${duration} -acodec libmp3lame -ab 192k \"${outputPath}\"`);
+    }
+  }
   
   return outputPath;
 }
@@ -38,11 +50,14 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Original audio file not found' });
     }
 
+    // Get the file extension for proper processing
+    const fileExtension = path.extname(originalFileName || filePath).toLowerCase();
+    
     const clips = [];
     
     for (const trigger of triggers) {
       try {
-        const clipPath = await generateAudioClip(inputPath, trigger.timestamp);
+        const clipPath = await generateAudioClip(inputPath, trigger.timestamp, fileExtension);
         
         // Convert to base64 for response
         const clipBuffer = fs.readFileSync(clipPath);
