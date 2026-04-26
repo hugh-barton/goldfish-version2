@@ -8,13 +8,5 @@
         "distDir": "build"
       }
     }
-  ],
-  "functions": {
-    "api/transcribe.js": {
-      "maxDuration": 30
-    },
-    "api/generate-clips.js": {
-      "maxDuration": 60
-    }
-  }
+  ]
 }
