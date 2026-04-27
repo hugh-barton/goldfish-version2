@@ -109,18 +109,36 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    // Log the complete file object for debugging
+    console.log('Complete file object:', JSON.stringify(audioFile, null, 2));
+
+    // In formidable v3, file path could be in different properties
+    const filePath = audioFile.filepath || audioFile.path || audioFile.file?.path;
+    
+    if (!filePath) {
+      console.error('ERROR: File path not found in file object');
+      return res.status(500).json({ 
+        error: 'File path not found',
+        details: 'The uploaded file structure is invalid',
+        fileObject: JSON.stringify(audioFile, null, 2)
+      });
+    }
+
     // Check if file exists
-    if (!audioFile.filepath || !fs.existsSync(audioFile.filepath)) {
-      console.error('ERROR: Uploaded file does not exist at path:', audioFile.filepath);
-      return res.status(500).json({ error: 'Uploaded file could not be accessed' });
+    if (!fs.existsSync(filePath)) {
+      console.error('ERROR: Uploaded file does not exist at path:', filePath);
+      return res.status(500).json({ 
+        error: 'Uploaded file could not be accessed',
+        details: `File not found at path: ${filePath}`
+      });
     }
 
     // Check if file is audio
     if (!audioFile.mimetype || !audioFile.mimetype.startsWith('audio/')) {
       console.error('ERROR: Invalid file type:', audioFile.mimetype);
       // Clean up file if it exists
-      if (audioFile.filepath && fs.existsSync(audioFile.filepath)) {
-        fs.unlinkSync(audioFile.filepath);
+      if (filePath && fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
       }
       return res.status(400).json({ error: 'Only audio files are allowed' });
     }
@@ -129,7 +147,7 @@ export default async function handler(req, res) {
       name: audioFile.originalFilename || audioFile.name,
       size: audioFile.size,
       type: audioFile.mimetype,
-      path: audioFile.filepath
+      path: filePath
     });
 
     // Check file size (100MB limit)
@@ -147,7 +165,7 @@ export default async function handler(req, res) {
     
     // Transcribe using OpenAI Whisper
     const transcription = await openaiClient.audio.transcriptions.create({
-      file: fs.createReadStream(audioFile.filepath),
+      file: fs.createReadStream(filePath),
       model: 'whisper-1',
       response_format: 'verbose_json',
       timestamp_granularities: ['word']
@@ -160,9 +178,9 @@ export default async function handler(req, res) {
     });
 
     // Clean up the uploaded file
-    if (fs.existsSync(audioFile.filepath)) {
+    if (fs.existsSync(filePath)) {
       console.log('Cleaning up uploaded file...');
-      fs.unlinkSync(audioFile.filepath);
+      fs.unlinkSync(filePath);
     }
 
     console.log('=== TRANSCRIPTION REQUEST SUCCESS ===');
@@ -183,9 +201,9 @@ export default async function handler(req, res) {
     }
     
     // Clean up any files if they exist
-    if (req.file && req.file.filepath && fs.existsSync(req.file.filepath)) {
+    if (filePath && fs.existsSync(filePath)) {
       console.log('Cleaning up file after error...');
-      fs.unlinkSync(req.file.filepath);
+      fs.unlinkSync(filePath);
     }
     
     const errorMessage = error.message || 'Transcription failed';
