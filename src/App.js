@@ -4,7 +4,9 @@ import './App.css';
 
 function App() {
   const [audioFile, setAudioFile] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [customTrigger, setCustomTrigger] = useState('');
+  // eslint-disable-next-line no-unused-vars
   const [clips, setClips] = useState([]);
   const [transcript, setTranscript] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -68,7 +70,20 @@ function App() {
       
     } catch (error) {
       console.error('Error processing audio:', error);
-      const errorMessage = error.response?.data?.error || 'Error processing audio. Please try again.';
+      let errorMessage = 'Error processing audio. Please try again.';
+      
+      if (error.response?.data) {
+        if (typeof error.response.data.error === 'string') {
+          errorMessage = error.response.data.error;
+        } else if (typeof error.response.data.error === 'object') {
+          errorMessage = JSON.stringify(error.response.data.error);
+        } else {
+          errorMessage = JSON.stringify(error.response.data);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       alert(errorMessage);
     } finally {
       setIsProcessing(false);
@@ -76,6 +91,7 @@ function App() {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const detectTriggers = (transcription) => {
     const segments = transcription.segments || [];
     const triggers = [];
