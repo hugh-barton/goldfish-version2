@@ -1,4 +1,5 @@
-const formidable = require('formidable');
+// Import formidable using the correct method for Vercel
+const formidable = require('formidable').default || require('formidable');
 const fs = require('fs');
 const path = require('path');
 const ffmpeg = require('ffmpeg-static');
