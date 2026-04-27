@@ -8,10 +8,21 @@ const { promisify } = require('util');
 
 const execAsync = promisify(exec);
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// We'll initialize OpenAI later, when we know the API key exists
+let openai = null;
+
+// Helper to get OpenAI client
+const getOpenAI = () => {
+  if (!openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key is not configured');
+    }
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+};
 
 // Configure formidable for Vercel
 export const config = {
@@ -49,6 +60,14 @@ export default async function handler(req, res) {
   console.log('=== TRANSCRIPTION REQUEST START ===');
   console.log('Request method:', req.method);
   console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  
+  // Log environment variable status
+  console.log('OPENAI_API_KEY status:', process.env.OPENAI_API_KEY ? '[PRESENT]' : '[MISSING]');
+  console.log('Environment check:', {
+    hasApiKey: !!process.env.OPENAI_API_KEY,
+    keyLength: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0,
+    keyStart: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 3) + '...' : 'N/A'
+  });
 
   // Check if OpenAI API key is set
   if (!process.env.OPENAI_API_KEY) {
@@ -109,15 +128,13 @@ export default async function handler(req, res) {
     }
 
     // Initialize OpenAI with detailed logging
-    console.log('Creating OpenAI client...');
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    console.log('Getting OpenAI client...');
+    const openaiClient = getOpenAI();
 
     console.log('Calling OpenAI Whisper API...');
     
     // Transcribe using OpenAI Whisper
-    const transcription = await openai.audio.transcriptions.create({
+    const transcription = await openaiClient.audio.transcriptions.create({
       file: fs.createReadStream(audioFile.filepath),
       model: 'whisper-1',
       response_format: 'verbose_json',
