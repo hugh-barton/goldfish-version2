@@ -96,13 +96,9 @@ export default async function handler(req, res) {
     const { files } = await parseForm(req);
     const audioFile = files.file;
 
-    console.log('Parsed form data:', { 
-      hasFile: !!audioFile,
-      fileName: audioFile?.originalFilename || audioFile?.name || 'unknown',
-      fileSize: audioFile?.size || 0,
-      fileType: audioFile?.mimetype || 'unknown',
-      filePath: audioFile?.filepath || 'unknown'
-    });
+    console.log('Parsed form data:', JSON.stringify(files, null, 2));
+    
+    const audioFile = files.file;
 
     if (!audioFile) {
       console.error('ERROR: No file uploaded');
@@ -110,17 +106,53 @@ export default async function handler(req, res) {
     }
 
     // Log the complete file object for debugging
-    console.log('Complete file object:', JSON.stringify(audioFile, null, 2));
+    console.log('Complete file object structure:', JSON.stringify(audioFile, null, 2));
 
-    // In formidable v3, file path could be in different properties
-    const filePath = audioFile.filepath || audioFile.path || audioFile.file?.path;
-    
+    // In formidable v3, the actual file might be nested differently
+    // Let's check various possible structures
+    let filePath;
+    let fileSize;
+    let fileName;
+    let mimeType;
+
+    // Case 1: Direct properties
+    if (audioFile.filepath || audioFile.path) {
+      filePath = audioFile.filepath || audioFile.path;
+      fileSize = audioFile.size;
+      fileName = audioFile.originalFilename || audioFile.name;
+      mimeType = audioFile.mimetype;
+    }
+    // Case 2: Nested file property (formidable v3 structure)
+    else if (audioFile.file && (audioFile.file.filepath || audioFile.file.path)) {
+      filePath = audioFile.file.filepath || audioFile.file.path;
+      fileSize = audioFile.file.size || audioFile.size;
+      fileName = audioFile.file.originalFilename || audioFile.file.name || audioFile.originalFilename || audioFile.name;
+      mimeType = audioFile.file.mimetype || audioFile.mimetype;
+    }
+    // Case 3: Array-like structure
+    else if (Array.isArray(audioFile) && audioFile.length > 0) {
+      const firstFile = audioFile[0];
+      filePath = firstFile.filepath || firstFile.path;
+      fileSize = firstFile.size;
+      fileName = firstFile.originalFilename || firstFile.name;
+      mimeType = firstFile.mimetype;
+    }
+
+    console.log('Extracted file info:', {
+      filePath,
+      fileName,
+      fileSize,
+      mimeType,
+      hasFilePath: !!filePath
+    });
+
     if (!filePath) {
       console.error('ERROR: File path not found in file object');
       return res.status(500).json({ 
         error: 'File path not found',
         details: 'The uploaded file structure is invalid',
-        fileObject: JSON.stringify(audioFile, null, 2)
+        fileObject: JSON.stringify(audioFile, null, 2),
+        availableProperties: Object.keys(audioFile)
       });
     }
 
@@ -134,8 +166,8 @@ export default async function handler(req, res) {
     }
 
     // Check if file is audio
-    if (!audioFile.mimetype || !audioFile.mimetype.startsWith('audio/')) {
-      console.error('ERROR: Invalid file type:', audioFile.mimetype);
+    if (!mimeType || !mimeType.startsWith('audio/')) {
+      console.error('ERROR: Invalid file type:', mimeType);
       // Clean up file if it exists
       if (filePath && fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -144,16 +176,16 @@ export default async function handler(req, res) {
     }
 
     console.log('Processing audio file:', {
-      name: audioFile.originalFilename || audioFile.name,
-      size: audioFile.size,
-      type: audioFile.mimetype,
+      name: fileName,
+      size: fileSize,
+      type: mimeType,
       path: filePath
     });
 
     // Check file size (100MB limit)
     const maxSize = 100 * 1024 * 1024; // 100MB
-    if (audioFile.size > maxSize) {
-      console.error('ERROR: File too large:', audioFile.size, 'bytes (max:', maxSize, 'bytes)');
+    if (fileSize > maxSize) {
+      console.error('ERROR: File too large:', fileSize, 'bytes (max:', maxSize, 'bytes)');
       return res.status(413).json({ error: 'File size exceeds 100MB limit' });
     }
 
