@@ -61,6 +61,9 @@ export default async function handler(req, res) {
   console.log('Request method:', req.method);
   console.log('Request headers:', JSON.stringify(req.headers, null, 2));
   
+  // Log ALL environment variables (for debugging - be careful with sensitive info!)
+  console.log('Available environment variables:', Object.keys(process.env).filter(key => !key.includes('SECRET') && !key.includes('TOKEN') && !key.includes('PASSWORD')));
+  
   // Log environment variable status
   console.log('OPENAI_API_KEY status:', process.env.OPENAI_API_KEY ? '[PRESENT]' : '[MISSING]');
   console.log('Environment check:', {
@@ -68,6 +71,12 @@ export default async function handler(req, res) {
     keyLength: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0,
     keyStart: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 3) + '...' : 'N/A'
   });
+  
+  // Check for similar variable names
+  const similarKeys = Object.keys(process.env).filter(key => 
+    key.toLowerCase().includes('openai') || key.toLowerCase().includes('api')
+  );
+  console.log('Similar environment variables found:', similarKeys);
 
   // Check if OpenAI API key is set
   if (!process.env.OPENAI_API_KEY) {
