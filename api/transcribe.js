@@ -1,4 +1,3 @@
-const { OpenAI } = require('openai');
 const formidable = require('formidable');
 const fs = require('fs');
 const path = require('path');
@@ -8,15 +7,18 @@ const { promisify } = require('util');
 
 const execAsync = promisify(exec);
 
-// We'll initialize OpenAI later, when we know the API key exists
+// We'll dynamically import OpenAI when needed
 let openai = null;
 
 // Helper to get OpenAI client
-const getOpenAI = () => {
+const getOpenAI = async () => {
   if (!openai) {
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OpenAI API key is not configured');
     }
+    
+    // Dynamically import OpenAI
+    const { OpenAI } = await import('openai');
     openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
@@ -138,7 +140,7 @@ export default async function handler(req, res) {
 
     // Initialize OpenAI with detailed logging
     console.log('Getting OpenAI client...');
-    const openaiClient = getOpenAI();
+    const openaiClient = await getOpenAI();
 
     console.log('Calling OpenAI Whisper API...');
     
