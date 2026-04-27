@@ -1,8 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-const ffmpeg = require('ffmpeg-static');
-const { exec } = require('child_process');
-const { promisify } = require('util');
+import fs from 'fs';
+import path from 'path';
+import ffmpeg from 'ffmpeg-static';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 

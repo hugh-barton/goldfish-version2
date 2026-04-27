@@ -1,10 +1,10 @@
-// Import formidable using the correct method for Vercel
-const formidable = require('formidable').default || require('formidable');
-const fs = require('fs');
-const path = require('path');
-const ffmpeg = require('ffmpeg-static');
-const { exec } = require('child_process');
-const { promisify } = require('util');
+// Import ES modules
+import formidable from 'formidable';
+import fs from 'fs';
+import path from 'path';
+import ffmpeg from 'ffmpeg-static';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
@@ -94,8 +94,7 @@ export default async function handler(req, res) {
 
   try {
     const { files } = await parseForm(req);
-    const audioFile = files.file;
-
+    
     console.log('Parsed form data:', JSON.stringify(files, null, 2));
     
     const audioFile = files.file;
